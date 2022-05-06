@@ -10,8 +10,8 @@
 ## Original Microsoft copyright is maintained below.
 ##
 ## Iron Vine Security has added the following for the purpose of installing Elastic Agent:
-##     * variables: fleeturl, enrolltoken
-##     * functions: checkProfile, installTARGZ
+##     * variables: fleeturl, enrolltoken, intel_url, apple_url
+##     * functions: checkProfile, installTARGZ, checkCPU
 ##
 ##########################################################################################################################################
 
@@ -37,7 +37,8 @@
 ## User Defined variables
 
 # Elastic Agent download URL
-weburl="https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.1.2-darwin-x86_64.tar.gz"               
+intel_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.2.0-darwin-x86_64.tar.gz"
+apple_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.2.0-darwin-aarch64.tar.gz"
 
 # Elastic Fleet URL
 fleeturl="<INSERT YOUR FLEET URL>"
@@ -106,32 +107,20 @@ waitForProcess () {
 
 }
 
-# Function to check if we need Rosetta 2
-checkForRosetta2 () {
+# Function to check which macOS CPU processor is in use
+checkCPU () {
 
     #################################################################################################################
     #################################################################################################################
     ##
-    ##  Simple function to install Rosetta 2 if needed.
-    ##
-    ##  Functions
-    ##
-    ##      waitForProcess (used to pause script if another instance of softwareupdate is running)
-    ##
-    ##  Variables
-    ##
-    ##      None
+    ##  Simple function to check which CPU is used and set weburl variable accordingly
     ##
     ###############################################################
     ###############################################################
 
     
 
-    echo "$(date) | Checking if we need Rosetta 2 or not"
-
-    # if Software update is already running, we need to wait...
-    waitForProcess "/usr/sbin/softwareupdate"
-
+    echo "$(date) | Checking CPU type"
 
     ## Note, Rosetta detection code from https://derflounder.wordpress.com/2020/11/17/installing-rosetta-2-on-apple-silicon-macs/
     OLDIFS=$IFS
@@ -140,33 +129,19 @@ checkForRosetta2 () {
 
     if [[ ${osvers_major} -ge 11 ]]; then
 
-        # Check to see if the Mac needs Rosetta installed by testing the processor
+        # Check macOS CPU type to determine which installer to download
 
         processor=$(/usr/sbin/sysctl -n machdep.cpu.brand_string | grep -o "Intel")
         
         if [[ -n "$processor" ]]; then
-            echo "$(date) | $processor processor installed. No need to install Rosetta."
+            echo "$(date) | Intel processor detected. Will download and install x86_64 version."
+            weburl=$intel_url
         else
-
-            # Check for Rosetta "oahd" process. If not found,
-            # perform a non-interactive install of Rosetta.
-            
-            if /usr/bin/pgrep oahd >/dev/null 2>&1; then
-                echo "$(date) | Rosetta is already installed and running. Nothing to do."
-            else
-                /usr/sbin/softwareupdate –install-rosetta –agree-to-license
-            
-                if [[ $? -eq 0 ]]; then
-                    echo "$(date) | Rosetta has been successfully installed."
-                else
-                    echo "$(date) | Rosetta installation failed!"
-                    exitcode=1
-                fi
-            fi
+            echo "$(date) | Apple processor detected. Will download and install aarch64 version."
+            weburl=$apple_url
         fi
-        else
-            echo "$(date) | Mac is running macOS $osvers_major.$osvers_minor.$osvers_dot_version."
-            echo "$(date) | No need to install Rosetta on this version of macOS."
+        
+        echo "$(date) | Download URL: $weburl"
     fi
 
 }
@@ -403,7 +378,7 @@ function updateCheck() {
     ## Is the app already installed?
     if [ -e "/Library/Elastic/Agent/$app" ]; then
     
-    # App is installed, if it's updates are handled by MAU we should quietly exit
+    # App is installed, if its updates are handled by MAU we should quietly exit
     if [[ $autoUpdate == "true" ]]; then
         echo "$(date) | [$appname] is already installed and handles updates itself, exiting"
         exit 0;
@@ -579,8 +554,8 @@ echo ""
 # Check if Elastic Agent Onboarding system profile is installed
 checkProfile
 
-# Install Rosetta if we need it
-checkForRosetta2
+# Check CPU type
+checkCPU
 
 # Test if we need to install or update
 updateCheck

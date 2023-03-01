@@ -2,7 +2,7 @@
 
 A Bash script for deploying Elastic Agent on macOS via Microsoft Endpoint Manager (Intune).
 
-Check out our blog for an [in-depth walkthrough](https://ironvine.com/how-to-deploy-elastic-agent-on-macos-with-microsoft-endpoint-manager-intune/) on how to use this script.  Enjoy!
+Check out my blog for an [in-depth walkthrough](https://www.ericooi.com/how-to-deploy-elastic-agent-on-macos-with-microsoft-intune/) on how to use this script.  Enjoy!
 
 ## Requirements
 
